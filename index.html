@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Snake & Apple</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            color: white;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+        h1 {
+            margin-bottom: 5px;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+            font-size: 28px;
+        }
+        #stats-container {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .stat {
+            text-align: center;
+            padding: 5px 10px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            min-width: 80px;
+            margin: 2px;
+        }
+        #game-container {
+            position: relative;
+            touch-action: none;
+        }
+        #game-canvas {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            background-color: rgba(0, 0, 0, 0.2);
+            touch-action: none;
+        }
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 20px 40px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+            z-index: 100;
+            touch-action: none;
+        }
+        #level-up {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 20px 40px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+            z-index: 100;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.05); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+        #restart-btn, #continue-btn {
+            background: linear-gradient(to right, #ff5e62, #ff9966);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            font-size: 18px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: transform 0.2s;
+            touch-action: manipulation;
+        }
+        #restart-btn:hover, #restart-btn:active,
+        #continue-btn:hover, #continue-btn:active {
+            transform: scale(1.05);
+        }
+        .controls {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 10px;
+            width: 200px;
+            height: 200px;
+        }
+        .control-btn {
+            background-color: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            transition: all 0.2s;
+        }
+        .control-btn:active {
+            background-color: rgba(255, 255, 255, 0.4);
+            transform: scale(0.95);
+        }
+        #up-btn {
+            grid-column: 2;
+            grid-row: 1;
+        }
+        #left-btn {
+            grid-column: 1;
+            grid-row: 2;
+        }
+        #right-btn {
+            grid-column: 3;
+            grid-row: 2;
+        }
+        #down-btn {
+            grid-column: 2;
+            grid-row: 3;
+        }
+        #settings-container {
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            max-width: 400px;
+        }
+        .settings-row {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            background-color: rgba(255, 255, 255, 0.2);
+            padding: 8px 15px;
+            border-radius: 5px;
+        }
+        select, button {
+            background-color: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            color: white;
+            padding: 5px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        button {
+            cursor: pointer;
+            padding: 8px 12px;
+        }
+        .powerup {
+            animation: pulse 0.5s infinite alternate;
+        }
+        @keyframes powerup {
+            from { opacity: 0.7; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1.1); }
+        }
+        .golden-apple {
+            filter: brightness(1.5) drop-shadow(0 0 5px gold);
+        }
+        .special-apple {
+            filter: brightness(1.3) drop-shadow(0 0 5px #00ff00);
+        }
+        .poison-apple {
+            filter: brightness(0.7) drop-shadow(0 0 5px #ff00ff);
+        }
+        #pause-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 10;
+        }
+        #pause-menu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 20px 40px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+            z-index: 100;
+        }
+        #start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 200;
+            padding: 20px;
+        }
+        .start-title {
+            font-size: 28px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .start-options {
+            width: 100%;
+            max-width: 300px;
+            margin-bottom: 20px;
+        }
+        .option-group {
+            margin-bottom: 15px;
+            text-align: left;
+            width: 100%;
+        }
+        .option-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .option-group select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 5px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            color: white;
+        }
+        .start-btn {
+            background: linear-gradient(to right, #4CAF50, #45a049);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            font-size: 18px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: transform 0.2s;
+        }
+        .start-btn:hover {
+            transform: scale(1.05);
+        }
+        #high-scores {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 20px 40px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+            z-index: 100;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .scores-title {
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+        .scores-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            width: 100%;
+        }
+        .scores-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            justify-content: space-between;
+        }
+        .scores-list li:first-child {
+            font-weight: bold;
+            color: gold;
+        }
+        .close-scores {
+            background: #666;
+            margin-top: 15px;
+        }
+        .view-scores {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 10;
+        }
+        @media (max-width: 480px) {
+            .controls {
+                width: 180px;
+                height: 180px;
+            }
+            .control-btn {
+                padding: 10px;
+                font-size: 20px;
+            }
+            h1 {
+                font-size: 24px;
+            }
+        }
+
+        #rules-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 200;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .rules-content {
+            margin: 20px 0;
+            line-height: 1.8;
+            font-size: 16px;
+        }
+
+        #start-game-btn {
+            background: linear-gradient(to right, #4CAF50, #45a049);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            font-size: 18px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: transform 0.2s;
+        }
+
+        #start-game-btn:hover {
+            transform: scale(1.05);
+        }        
+    </style>
+</head>
+<body>
+    <h1>Neon Snake & Apple</h1>
+    <div id="stats-container">
+        <div class="stat" id="level-display">Level: 1</div>
+        <div class="stat" id="score-display">Score: 0</div>
+        <div class="stat" id="lives-display">Lives: 3</div>
+    </div>
+    <div id="next-life" style="margin-bottom: 10px;">Next extra life in: 10 apples</div>
+    
+    <div id="game-container">
+        <canvas id="game-canvas" width="400" height="400"></canvas>
+        <div id="game-over">
+            <h2>Game Over!</h2>
+            <p id="final-score">Your score: 0</p>
+            <p id="final-level">You reached level: 1</p>
+            <button id="restart-btn">Play Again</button>
+        </div>
+        <div id="level-up">
+            <h2>Level Up!</h2>
+            <p id="level-up-text">You've reached level 2!</p>
+            <button id="continue-btn">Continue</button>
+        </div>
+        <div id="pause-menu">
+            <h2>Game Paused</h2>
+            <button id="resume-btn">Resume</button>
+            <button id="restart-pause-btn">Restart</button>
+        </div>
+        <button id="pause-btn">⏸️</button>
+        <button id="view-scores">🏆</button>
+    </div>
+    
+    <div class="controls">
+        <button class="control-btn" id="up-btn">↑</button>
+        <button class="control-btn" id="left-btn">←</button>
+        <button class="control-btn" id="right-btn">→</button>
+        <button class="control-btn" id="down-btn">↓</button>
+    </div>
+    
+    <div id="settings-container">
+        <div class="settings-row">
+            <span>Game Mode:</span>
+            <select id="mode-selector">
+                <option value="classic">Classic</option>
+                <option value="wrapping">Wrapping</option>
+            </select>
+        </div>
+        <div class="settings-row">
+            <span>Difficulty:</span>
+            <select id="difficulty-selector">
+                <option value="easy">Easy</option>
+                <option value="medium" selected>Medium</option>
+                <option value="hard">Hard</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="start-screen">
+        <div class="start-title">Neon Snake & Apple</div>
+        <div class="start-options">
+            <div class="option-group">
+                <label for="start-mode">Game Mode:</label>
+                <select id="start-mode">
+                    <option value="classic">Classic (Walls kill)</option>
+                    <option value="wrapping">Wrapping (Teleport edges)</option>
+                </select>
+            </div>
+            <div class="option-group">
+                <label for="start-difficulty">Difficulty:</label>
+                <select id="start-difficulty">
+                    <option value="easy">Easy</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="hard">Hard</option>
+                </select>
+            </div>
+        </div>
+        <button id="start-btn" class="start-btn">Start Game</button>
+    </div>
+
+    <div id="rules-screen">
+        <div class="start-title">Game Rules</div>
+        <div class="rules-content">
+            <p>• Control the snake with arrow keys or on-screen buttons</p>
+            <p>• Eat red apples to grow and score points</p>
+            <p>• Golden apples (★) give extra life</p>
+            <p>• Purple apples slow you down</p>
+            <p>• Avoid walls and yourself</p>
+            <p>• Get extra life every 10 apples</p>
+        </div>
+        <button id="start-game-btn" class="start-btn">Start Game</button>
+    </div>
+
+    <div id="high-scores">
+        <h2 class="scores-title">Top 10 High Scores</h2>
+        <ol class="scores-list" id="scores-list">
+            <!-- Entries will have initials and score -->
+        </ol>
+        <button id="close-scores" class="close-scores start-btn">Close</button>
+    </div>
+
+    <script>
+        // Game constants
+        const GRID_SIZE = 20;
+        const CELL_SIZE = 400 / GRID_SIZE;
+        const BASE_GAME_SPEED = 10;
+        const MAX_GAME_SPEED = 25;
+        const INITIAL_LIVES = 3;
+        const APPLES_PER_EXTRA_LIFE = 10;
+        const APPLES_PER_LEVEL = 5;
+        const MAX_HIGH_SCORES = 10;
+
+        // Game state
+        let gameMode = 'classic';
+        let gameDifficulty = 'medium';
+        let gameState = {
+            snake: [],
+            apples: [],
+            special_apples: [],
+            poison_apples: [],
+            golden_apple: null,
+            score: 0,
+            lives: INITIAL_LIVES,
+            game_over: false,
+            paused: false,
+            speed: BASE_GAME_SPEED,
+            apples_eaten: 0,
+            level: 1,
+            last_crash_position: null,
+            next_life_at: APPLES_PER_EXTRA_LIFE,
+            next_level_at: APPLES_PER_LEVEL
+        };
+
+        // Direction handling
+        let currentDirection = { x: 1, y: 0 };
+        let nextDirection = { x: 1, y: 0 };
+        
+        // Canvas and DOM elements
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('score-display');
+        const livesDisplay = document.getElementById('lives-display');
+        const nextLifeDisplay = document.getElementById('next-life');
+        const levelDisplay = document.getElementById('level-display');
+        const gameOverDisplay = document.getElementById('game-over');
+        const levelUpDisplay = document.getElementById('level-up');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const finalLevelDisplay = document.getElementById('final-level');
+        const levelUpText = document.getElementById('level-up-text');
+        const restartBtn = document.getElementById('restart-btn');
+        const continueBtn = document.getElementById('continue-btn');
+        const pauseBtn = document.getElementById('pause-btn');
+        const pauseMenu = document.getElementById('pause-menu');
+        const resumeBtn = document.getElementById('resume-btn');
+        const restartPauseBtn = document.getElementById('restart-pause-btn');
+        const modeSelector = document.getElementById('mode-selector');
+        const difficultySelector = document.getElementById('difficulty-selector');
+        const startScreen = document.getElementById('start-screen');
+        const startBtn = document.getElementById('start-btn');
+        const startMode = document.getElementById('start-mode');
+        const startDifficulty = document.getElementById('start-difficulty');
+        const highScores = document.getElementById('high-scores');
+        const scoresList = document.getElementById('scores-list');
+        const closeScores = document.getElementById('close-scores');
+        const viewScoresBtn = document.getElementById('view-scores');
+        const rulesScreen = document.getElementById('rules-screen');
+        const startGameBtn = document.getElementById('start-game-btn');
+
+        // Difficulty settings
+        const difficultySettings = {
+            easy: { speedMultiplier: 0.8, specialAppleChance: 0.1, poisonAppleChance: 0.05, goldenAppleInterval: 15 },
+            medium: { speedMultiplier: 1.0, specialAppleChance: 0.15, poisonAppleChance: 0.1, goldenAppleInterval: 12 },
+            hard: { speedMultiplier: 1.3, specialAppleChance: 0.2, poisonAppleChance: 0.15, goldenAppleInterval: 8 }
+        };
+
+        // High scores from localStorage
+        let highScoresList = JSON.parse(localStorage.getItem('snakeHighScores')) || [];
+        // Make sure each entry has the initials property
+        highScoresList = highScoresList.map(entry => ({
+            initials: entry.initials || "AAA",
+            score: entry.score || 0,
+            date: entry.date || new Date().toISOString()
+        }));
+
+        // Prevent scrolling when touching the canvas
+        document.body.addEventListener('touchmove', function(e) {
+            if (e.target === canvas || 
+                e.target.classList.contains('control-btn') ||
+                e.target.id === 'restart-btn' ||
+                e.target.id === 'continue-btn' ||
+                e.target.id === 'resume-btn' ||
+                e.target.id === 'restart-pause-btn' ||
+                e.target.id === 'start-btn' ||
+                e.target.id === 'close-scores' ||
+                e.target.id === 'view-scores' ||
+                e.target.id === 'start-game-btn') {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // Game class with improved features
+        class SnakeGame {
+            constructor(mode, difficulty) {
+                this.mode = mode;
+                this.difficulty = difficulty;
+                this.settings = difficultySettings[difficulty];
+                this.reset();
+            }
+            
+            reset() {
+                this.snake = [[Math.floor(GRID_SIZE / 2), Math.floor(GRID_SIZE / 2)]];
+                this.apples = [this.generateApple()];
+                this.special_apples = [];
+                this.poison_apples = [];
+                this.golden_apple = null;
+                this.golden_apple_timer = 0;
+                this.score = 0;
+                this.lives = INITIAL_LIVES;
+                this.game_over = false;
+                this.paused = false;
+                this.speed = BASE_GAME_SPEED;
+                this.apples_eaten = 0;
+                this.level = 1;
+                this.last_crash_position = null;
+                this.next_life_at = APPLES_PER_EXTRA_LIFE;
+                this.next_level_at = APPLES_PER_LEVEL;
+                this.level_up_triggered = false;
+                this.gameInterval = null;
+            }
+            
+            generateApple() {
+                // Initialize arrays if they don't exist
+                if (!this.apples) this.apples = [];
+                if (!this.special_apples) this.special_apples = [];
+                if (!this.poison_apples) this.poison_apples = [];
+                
+                // Limit attempts to prevent infinite loops
+                let attempts = 0;
+                const maxAttempts = GRID_SIZE * GRID_SIZE * 2;
+                
+                while (attempts++ < maxAttempts) {
+                    const apple = [
+                        Math.floor(Math.random() * GRID_SIZE), 
+                        Math.floor(Math.random() * GRID_SIZE)
+                    ];
+                    
+                    // Check if apple is not on the snake or other apples
+                    const isOnSnake = this.snake.some(segment => 
+                        segment[0] === apple[0] && segment[1] === apple[1]);
+                    
+                    const isOnApple = this.apples.some(a => 
+                        a[0] === apple[0] && a[1] === apple[1]);
+                    
+                    const isOnSpecial = this.special_apples.some(a => 
+                        a[0] === apple[0] && a[1] === apple[1]);
+                    
+                    const isOnPoison = this.poison_apples.some(a => 
+                        a[0] === apple[0] && a[1] === apple[1]);
+                    
+                    if (!isOnSnake && !isOnApple && !isOnSpecial && !isOnPoison) {
+                        return apple;
+                    }
+                }
+                
+                // If we couldn't find a spot after many attempts, return null
+                return null;
+            }
+            
+            generateSpecialApple() {
+                if (Math.random() < this.settings.specialAppleChance) {
+                    const apple = this.generateApple();
+                    if (apple) {
+                        apple.points = 3;
+                        apple.effect = 'speed_boost';
+                        apple.effect_duration = 300; // 3 seconds at 10fps
+                        return apple;
+                    }
+                }
+                return null;
+            }
+            
+            generatePoisonApple() {
+                if (Math.random() < this.settings.poisonAppleChance) {
+                    const apple = this.generateApple();
+                    if (apple) {
+                        apple.effect = 'slow_down';
+                        apple.effect_duration = 150; // 1.5 seconds
+                        return apple;
+                    }
+                }
+                return null;
+            }
+            
+            generateGoldenApple() {
+                if (this.apples_eaten > 0 && 
+                    this.apples_eaten % this.settings.goldenAppleInterval === 0 && 
+                    !this.golden_apple) {
+                    const apple = this.generateApple();
+                    if (apple) {
+                        apple.points = 10;
+                        apple.effect = 'extra_life';
+                        return apple;
+                    }
+                }
+                return null;
+            }
+            
+            update(direction = null) {
+                if (this.game_over || this.paused) return false;
+                
+                // Update direction if provided
+                if (direction) {
+                    // Prevent 180-degree turns
+                    if (!(currentDirection.x === -direction.x && currentDirection.y === -direction.y)) {
+                        nextDirection = { x: direction.x, y: direction.y };
+                    }
+                }
+                
+                // Calculate new head position
+                const head = [...this.snake[0]];
+                head[0] += nextDirection.x;
+                head[1] += nextDirection.y;
+                
+                // Handle different game modes
+                if (this.mode === 'wrapping') {
+                    // Wrap around the edges
+                    head[0] = (head[0] + GRID_SIZE) % GRID_SIZE;
+                    head[1] = (head[1] + GRID_SIZE) % GRID_SIZE;
+                } else {
+                    // Classic mode - check for wall collisions
+                    if (head[0] < 0 || head[0] >= GRID_SIZE || 
+                        head[1] < 0 || head[1] >= GRID_SIZE) {
+                        this.handleCrash();
+                        return false;
+                    }
+                }
+                
+                // Check for self collision
+                if (this.snake.some((segment, index) => index > 0 && segment[0] === head[0] && segment[1] === head[1])) {
+                    this.handleCrash();
+                    return false;
+                }
+                
+                // Move snake
+                this.snake.unshift([...head]);
+                
+                // Check for apple collisions
+                let appleEaten = false;
+                let specialEaten = false;
+                let poisonEaten = false;
+                let goldenEaten = false;
+                
+                // Regular apples
+                for (let i = 0; i < this.apples.length; i++) {
+                    if (head[0] === this.apples[i][0] && head[1] === this.apples[i][1]) {
+                        this.score += 1;
+                        this.apples_eaten += 1;
+                        this.apples.splice(i, 1);
+                        const newApple = this.generateApple();
+                        if (newApple) this.apples.push(newApple);
+                        appleEaten = true;
+                        break;
+                    }
+                }
+                
+                // Special apples
+                for (let i = 0; i < this.special_apples.length; i++) {
+                    if (head[0] === this.special_apples[i][0] && head[1] === this.special_apples[i][1]) {
+                        this.score += this.special_apples[i].points;
+                        this.apples_eaten += 1;
+                        this.speed = Math.min(MAX_GAME_SPEED, this.speed + 2);
+                        this.special_apples.splice(i, 1);
+                        specialEaten = true;
+                        break;
+                    }
+                }
+                
+                // Poison apples
+                for (let i = 0; i < this.poison_apples.length; i++) {
+                    if (head[0] === this.poison_apples[i][0] && head[1] === this.poison_apples[i][1]) {
+                        this.score = Math.max(0, this.score - 2);
+                        this.lives = Math.max(0, this.lives - 1);
+                        this.speed = Math.max(BASE_GAME_SPEED, this.speed - 2);
+                        this.poison_apples.splice(i, 1);
+                        poisonEaten = true;
+                        break;
+                    }
+                }
+                
+                // Golden apple
+                if (this.golden_apple && head[0] === this.golden_apple[0] && head[1] === this.golden_apple[1]) {
+                    this.score += this.golden_apple.points;
+                    this.lives += 1;
+                    this.golden_apple = null;
+                    goldenEaten = true;
+                }
+                
+                // Handle apple effects
+                if (appleEaten || specialEaten || poisonEaten || goldenEaten) {
+                    // Check for level up
+                    if (this.apples_eaten >= this.next_level_at) {
+                        this.level += 1;
+                        this.next_level_at = this.apples_eaten + APPLES_PER_LEVEL;
+                        this.level_up_triggered = true;
+                        
+                        // Increase speed based on difficulty
+                        this.speed = Math.min(
+                            MAX_GAME_SPEED, 
+                            this.speed + 1 + (this.settings.speedMultiplier * 0.5)
+                        );
+                    }
+                    
+                    // Award extra life
+                    if (this.apples_eaten % APPLES_PER_EXTRA_LIFE === 0) {
+                        this.lives += 1;
+                    }
+                } else {
+                    // Only remove tail if no apple was eaten
+                    this.snake.pop();
+                }
+                
+                // Manage special apples
+                this.golden_apple_timer++;
+                if (this.golden_apple_timer > 300) { // 30 seconds at 10fps
+                    this.golden_apple = this.generateGoldenApple();
+                    this.golden_apple_timer = 0;
+                }
+                
+                // Add special and poison apples periodically
+                if (Math.random() < 0.02 && this.special_apples.length < 2) {
+                    const special = this.generateSpecialApple();
+                    if (special) this.special_apples.push(special);
+                }
+                
+                if (Math.random() < 0.015 && this.poison_apples.length < 1) {
+                    const poison = this.generatePoisonApple();
+                    if (poison) this.poison_apples.push(poison);
+                }
+                
+                // Remove expired special apples
+                this.special_apples = this.special_apples.filter(apple => {
+                    if (apple.effect_duration) {
+                        apple.effect_duration--;
+                        return apple.effect_duration > 0;
+                    }
+                    return true;
+                });
+                
+                return true;
+            }
+            
+            handleCrash() {
+                this.lives -= 1;
+                this.last_crash_position = [...this.snake[0]];
+                
+                if (this.lives <= 0) {
+                    this.game_over = true;
+                } else {
+                    // Reset snake position but keep score
+                    this.snake = [[Math.floor(GRID_SIZE / 2), Math.floor(GRID_SIZE / 2)]];
+                    currentDirection = { x: 1, y: 0 };
+                    nextDirection = { x: 1, y: 0 };
+                }
+            }
+            
+            togglePause() {
+                this.paused = !this.paused;
+                if (this.paused) {
+                    clearInterval(this.gameInterval);
+                } else {
+                    this.gameInterval = setInterval(updateGame, 1000 / this.speed);
+                }
+                return this.paused;
+            }
+            
+            getState() {
+                return {
+                    snake: this.snake,
+                    apples: this.apples,
+                    special_apples: this.special_apples,
+                    poison_apples: this.poison_apples,
+                    golden_apple: this.golden_apple,
+                    score: this.score,
+                    lives: this.lives,
+                    game_over: this.game_over,
+                    paused: this.paused,
+                    speed: this.speed,
+                    apples_eaten: this.apples_eaten,
+                    level: this.level,
+                    last_crash_position: this.last_crash_position,
+                    next_life_at: (APPLES_PER_EXTRA_LIFE - (this.apples_eaten % APPLES_PER_EXTRA_LIFE)),
+                    next_level_at: this.next_level_at - this.apples_eaten,
+                    level_up_triggered: this.level_up_triggered
+                };
+            }
+        }
+
+        // Initialize game
+        let game = null;
+        let gameInterval = null;
+
+        // Initialize game function
+        function initGame() {
+            try {
+                if (gameInterval) clearInterval(gameInterval);
+                
+                game = new SnakeGame(gameMode, gameDifficulty);
+                gameState = game.getState();
+                
+                // Update UI
+                scoreDisplay.textContent = `Score: ${gameState.score}`;
+                livesDisplay.textContent = `Lives: ${gameState.lives}`;
+                nextLifeDisplay.textContent = `Next extra life in: ${gameState.next_life_at} apples`;
+                levelDisplay.textContent = `Level: ${gameState.level}`;
+                
+                drawGame();
+                
+                // Start game loop
+                gameInterval = setInterval(updateGame, 1000 / gameState.speed);
+            } catch (error) {
+                console.error("Error initializing game:", error);
+            }
+        }
+
+        // Event listeners for buttons
+        function setupControlButton(id, x, y) {
+            const btn = document.getElementById(id);
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                setDirection(x, y);
+            }, { passive: false });
+            
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                setDirection(x, y);
+            });
+        }
+
+        setupControlButton('up-btn', 0, -1);
+        setupControlButton('left-btn', -1, 0);
+        setupControlButton('right-btn', 1, 0);
+        setupControlButton('down-btn', 0, 1);
+        
+        restartBtn.addEventListener('touchstart', (e) => e.preventDefault());
+        restartBtn.addEventListener('click', resetGame);
+        
+        continueBtn.addEventListener('touchstart', (e) => e.preventDefault());
+        continueBtn.addEventListener('click', () => {
+            levelUpDisplay.style.display = 'none';
+            game.level_up_triggered = false;
+        });
+        
+        pauseBtn.addEventListener('touchstart', (e) => e.preventDefault());
+        pauseBtn.addEventListener('click', togglePause);
+        
+        resumeBtn.addEventListener('touchstart', (e) => e.preventDefault());
+        resumeBtn.addEventListener('click', () => {
+            pauseMenu.style.display = 'none';
+            game.togglePause();
+        });
+        
+        restartPauseBtn.addEventListener('touchstart', (e) => e.preventDefault());
+        restartPauseBtn.addEventListener('click', () => {
+            pauseMenu.style.display = 'none';
+            resetGame();
+        });
+
+        // Mode and difficulty selector
+        modeSelector.addEventListener('change', function() {
+            gameMode = this.value;
+            resetGame();
+        });
+        
+        difficultySelector.addEventListener('change', function() {
+            gameDifficulty = this.value;
+            resetGame();
+        });
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            // Prevent default for all arrow keys
+            if ([37, 38, 39, 40].includes(e.keyCode)) {
+                e.preventDefault();
+            }
+            
+            // Handle both key and keyCode for maximum compatibility
+            if (e.key === 'ArrowUp' || e.keyCode === 38) {
+                setDirection(0, -1);
+            } else if (e.key === 'ArrowLeft' || e.keyCode === 37) {
+                setDirection(-1, 0);
+            } else if (e.key === 'ArrowDown' || e.keyCode === 40) {
+                setDirection(0, 1);
+            } else if (e.key === 'ArrowRight' || e.keyCode === 39) {
+                setDirection(1, 0);
+            } else if (e.key === ' ' || e.key === 'p' || e.keyCode === 32 || e.keyCode === 80) {
+                e.preventDefault();
+                togglePause();
+            }
+        });
+
+        function setDirection(x, y) {
+            if (!game || gameState.game_over || gameState.paused) return;
+            
+            // Only update if the new direction is different from current
+            if (currentDirection.x !== x || currentDirection.y !== y) {
+                // Prevent 180-degree turns
+                if (!(currentDirection.x === -x && currentDirection.y === -y)) {
+                    nextDirection = { x, y };
+                    currentDirection = { x, y }; // Update current direction immediately
+                }
+            }
+        }
+        
+        function togglePause() {
+            if (!game || gameState.game_over) return;
+            
+            const isPaused = game.togglePause();
+            if (isPaused) {
+                pauseMenu.style.display = 'block';
+            } else {
+                pauseMenu.style.display = 'none';
+            }
+            
+            gameState = game.getState();
+        }
+
+        // Update the game state
+        function updateGame() {
+            if (!game || gameState.game_over || gameState.paused) return;
+            
+            try {
+                game.update();
+                gameState = game.getState();
+                
+                // Check for level up
+                if (gameState.level_up_triggered) {
+                    levelUpText.textContent = `You've reached level ${gameState.level}!`;
+                    levelUpDisplay.style.display = 'block';
+                    game.level_up_triggered = false;
+                }
+                
+                // Update UI
+                scoreDisplay.textContent = `Score: ${gameState.score}`;
+                livesDisplay.textContent = `Lives: ${gameState.lives}`;
+                nextLifeDisplay.textContent = `Next extra life in: ${gameState.next_life_at} apples`;
+                levelDisplay.textContent = `Level: ${gameState.level}`;
+                
+                if (gameState.game_over) {
+                    finalScoreDisplay.textContent = `Your score: ${gameState.score}`;
+                    finalLevelDisplay.textContent = `You reached level: ${gameState.level}`;
+                    gameOverDisplay.style.display = 'block';
+                    if (gameInterval) clearInterval(gameInterval);
+                    
+                    // Check if score qualifies for high scores
+                    if (gameState.score > 0) {
+                        updateHighScores(gameState.score);
+                    }
+                } else {
+                    gameOverDisplay.style.display = 'none';
+                }
+                
+                drawGame();
+            } catch (error) {
+                console.error("Error in updateGame:", error);
+            }
+        }
+
+        function drawGame() {
+            try {
+                // Clear canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw grid (optional visual aid)
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+                for (let i = 0; i <= GRID_SIZE; i++) {
+                    // Vertical lines
+                    ctx.beginPath();
+                    ctx.moveTo(i * CELL_SIZE, 0);
+                    ctx.lineTo(i * CELL_SIZE, canvas.height);
+                    ctx.stroke();
+                    // Horizontal lines
+                    ctx.beginPath();
+                    ctx.moveTo(0, i * CELL_SIZE);
+                    ctx.lineTo(canvas.width, i * CELL_SIZE);
+                    ctx.stroke();
+                }
+                
+                // Draw regular apples (red)
+                if (gameState.apples && gameState.apples.length > 0) {
+                    ctx.fillStyle = '#FF5252';
+                    gameState.apples.forEach(apple => {
+                        ctx.fillRect(
+                            apple[0] * CELL_SIZE, 
+                            apple[1] * CELL_SIZE, 
+                            CELL_SIZE, 
+                            CELL_SIZE
+                        );
+                    });
+                }
+                
+                // Draw special apples (golden with pulse effect)
+                if (gameState.special_apples && gameState.special_apples.length > 0) {
+                    ctx.fillStyle = '#FFD700';
+                    gameState.special_apples.forEach(apple => {
+                        ctx.save();
+                        ctx.shadowColor = '#FFD700';
+                        ctx.shadowBlur = 10;
+                        ctx.fillRect(
+                            apple[0] * CELL_SIZE, 
+                            apple[1] * CELL_SIZE, 
+                            CELL_SIZE, 
+                            CELL_SIZE
+                        );
+                        ctx.restore();
+                    });
+                }
+                
+                // Draw poison apples (purple with pulse effect)
+                if (gameState.poison_apples && gameState.poison_apples.length > 0) {
+                    ctx.fillStyle = '#8A2BE2';
+                    gameState.poison_apples.forEach(apple => {
+                        ctx.save();
+                        ctx.shadowColor = '#8A2BE2';
+                        ctx.shadowBlur = 10;
+                        ctx.fillRect(
+                            apple[0] * CELL_SIZE, 
+                            apple[1] * CELL_SIZE, 
+                            CELL_SIZE, 
+                            CELL_SIZE
+                        );
+                        ctx.restore();
+                    });
+                }
+                
+                // Draw golden apple (bright gold with strong glow)
+                if (gameState.golden_apple) {
+                    ctx.fillStyle = '#FFD700';
+                    ctx.save();
+                    ctx.shadowColor = '#FFFF00';
+                    ctx.shadowBlur = 20;
+                    ctx.fillRect(
+                        gameState.golden_apple[0] * CELL_SIZE, 
+                        gameState.golden_apple[1] * CELL_SIZE, 
+                        CELL_SIZE, 
+                        CELL_SIZE
+                    );
+                    ctx.restore();
+                    // Add star effect
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.font = '12px Arial';
+                    ctx.fillText('★', 
+                        gameState.golden_apple[0] * CELL_SIZE + 8, 
+                        gameState.golden_apple[1] * CELL_SIZE + 16
+                    );
+                }
+                
+                // Draw snake (green)
+                if (gameState.snake && gameState.snake.length > 0) {
+                    ctx.fillStyle = '#4CAF50';
+                    // Draw body segments
+                    for (let i = 1; i < gameState.snake.length; i++) {
+                        const segment = gameState.snake[i];
+                        ctx.fillRect(
+                            segment[0] * CELL_SIZE, 
+                            segment[1] * CELL_SIZE, 
+                            CELL_SIZE, 
+                            CELL_SIZE
+                        );
+                    }
+                    // Draw head (darker green)
+                    const head = gameState.snake[0];
+                    ctx.fillStyle = '#2E7D32';
+                    ctx.fillRect(
+                        head[0] * CELL_SIZE, 
+                        head[1] * CELL_SIZE, 
+                        CELL_SIZE, 
+                        CELL_SIZE
+                    );
+                }
+                
+                // Draw crash effect if needed
+                if (gameState.last_crash_position) {
+                    ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+                    ctx.fillRect(
+                        gameState.last_crash_position[0] * CELL_SIZE,
+                        gameState.last_crash_position[1] * CELL_SIZE,
+                        CELL_SIZE,
+                        CELL_SIZE
+                    );
+                }
+            } catch (error) {
+                console.error("Error in drawGame:", error);
+            }
+        }
+
+        function resetGame() {
+            try {
+                if (gameInterval) clearInterval(gameInterval);
+                initGame();
+            } catch (error) {
+                console.error("Error in resetGame:", error);
+            }
+        }
+
+        function updateHighScores(score) {
+            // Add code to prompt for player initials
+            let initials = prompt("Congratulations! Enter your initials (3 letters):");
+            
+            // If user cancels or enters nothing, don't add to high scores
+            if (initials === null || initials.trim() === "") {
+                return;
+            }
+            
+            // Validate and format initials
+            initials = initials.toUpperCase().substring(0, 3).padEnd(3, 'A');
+            
+            // Add new score with initials
+            highScoresList.push({ 
+                initials: initials, 
+                score: score,
+                date: new Date().toISOString()
+            });
+            
+            // Sort by score (descending), then by date (newest first)
+            highScoresList.sort((a, b) => {
+                if (b.score !== a.score) return b.score - a.score;
+                return new Date(b.date) - new Date(a.date);
+            });
+            
+            // Keep only top 10
+            if (highScoresList.length > MAX_HIGH_SCORES) {
+                highScoresList = highScoresList.slice(0, MAX_HIGH_SCORES);
+            }
+            
+            // Save to localStorage
+            localStorage.setItem('snakeHighScores', JSON.stringify(highScoresList));
+            
+            // Update display
+            updateHighScoresDisplay();
+        }
+
+        function updateHighScoresDisplay() {
+            scoresList.innerHTML = '';
+            highScoresList.forEach((entry, index) => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span>${index + 1}. ${entry.initials}</span><span>${entry.score}</span>`;
+                scoresList.appendChild(li);
+            });
+        }
+
+        // View high scores
+        viewScoresBtn.addEventListener('click', () => {
+            updateHighScoresDisplay();
+            highScores.style.display = 'block';
+        });
+
+        closeScores.addEventListener('click', () => {
+            highScores.style.display = 'none';
+        });
+
+        // Start screen functionality
+        startBtn.addEventListener('click', () => {
+            gameMode = startMode.value;
+            gameDifficulty = startDifficulty.value;
+            startScreen.style.display = 'none';
+            // rulesScreen.style.display = 'flex';
+        });
+
+        // Start game from rules screen
+        startGameBtn.addEventListener('click', () => {
+            // rulesScreen.style.display = 'none';
+            initGame();
+        });
+
+        // Initialize game when page loads
+        window.addEventListener('load', () => {
+            updateHighScoresDisplay();
+            startScreen.style.display = 'flex';
+        });
+    </script>
+</body>
+</html>
