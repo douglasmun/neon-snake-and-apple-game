@@ -1236,12 +1236,12 @@
             gameMode = startMode.value;
             gameDifficulty = startDifficulty.value;
             startScreen.style.display = 'none';
-            // rulesScreen.style.display = 'flex';
+            rulesScreen.style.display = 'flex';
         });
 
         // Start game from rules screen
         startGameBtn.addEventListener('click', () => {
-            // rulesScreen.style.display = 'none';
+            rulesScreen.style.display = 'none';
             initGame();
         });
 
